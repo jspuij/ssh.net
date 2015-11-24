@@ -182,6 +182,30 @@ namespace Renci.SshNet.Security
         /// <summary>
         /// Initializes a new instance of the <see cref="RsaKey"/> class.
         /// </summary>
+        /// <param name="data">DER encoded private key data.</param>
+        public RsaKey(SshDataStream stream)
+        {
+            var modulus = stream.ReadBigInt();
+            var exponent = stream.ReadBigInt();
+            var d = stream.ReadBigInt();
+            var inverseQ = stream.ReadBigInt();
+            var p = stream.ReadBigInt();
+            var q = stream.ReadBigInt();
+
+            this._privateKey = new BigInteger[8];
+            this._privateKey[0] = modulus;
+            this._privateKey[1] = exponent;
+            this._privateKey[2] = d;
+            this._privateKey[3] = p;
+            this._privateKey[4] = q;
+            this._privateKey[5] = PrimeExponent(d, p);
+            this._privateKey[6] = PrimeExponent(d, q);
+            this._privateKey[7] = inverseQ;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RsaKey"/> class.
+        /// </summary>
         /// <param name="modulus">The modulus.</param>
         /// <param name="exponent">The exponent.</param>
         /// <param name="d">The d.</param>

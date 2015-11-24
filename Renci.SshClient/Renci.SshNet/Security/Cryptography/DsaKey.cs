@@ -135,6 +135,26 @@ namespace Renci.SshNet.Security
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="DsaKey"/> class.
+        /// </summary>
+        /// <param name="data">DER encoded private key data.</param>
+        public DsaKey(SshDataStream stream)
+        {
+            var p = stream.ReadBigInt();
+            var q = stream.ReadBigInt();
+            var g = stream.ReadBigInt();
+            var y = stream.ReadBigInt();
+            var x = stream.ReadBigInt();
+
+            this._privateKey = new BigInteger[5];
+            this._privateKey[0] = p;
+            this._privateKey[1] = q;
+            this._privateKey[2] = g;
+            this._privateKey[3] = y;
+            this._privateKey[4] = x;
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="DsaKey" /> class.
         /// </summary>
         /// <param name="p">The p.</param>

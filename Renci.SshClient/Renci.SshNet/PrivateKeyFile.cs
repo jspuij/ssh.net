@@ -270,6 +270,93 @@ namespace Renci.SshNet
                         throw new NotSupportedException(string.Format("Key type '{0}' is not supported.", keyType));
                     }
                     break;
+                case "OPENSSH":
+                    reader = new SshDataReader(decryptedData);
+
+                    byte[] magicDefinition = System.Text.Encoding.ASCII.GetBytes("openssh-key-v1\0");
+
+                    byte[] authMagic = reader.ReadBytes(magicDefinition.Length);
+                    for (int i = 0; i < magicDefinition.Length; i++)
+                    {
+                        if (authMagic[i] != magicDefinition[i])
+                        {
+                            throw new SshException("Invalid OPENSSH private key.");
+                        }
+                    }
+                    cipherName = reader.ReadString();
+
+                    if (cipherName != "none")
+                    {
+                        if (string.IsNullOrEmpty(passPhrase))
+                            throw new SshPassPhraseNullOrEmptyException("Private key is encrypted but passphrase is empty.");
+                    }
+
+                    string keyDerivationFunctionName = reader.ReadString();
+                    string keyDerivationFunctionOptions = reader.ReadString();
+                    var numberOfKeys = reader.ReadUInt32();
+                    if (numberOfKeys != 1)
+                    {
+                        throw new NotSupportedException(string.Format("Multiple keys ({0}) in one keyfile not supported.", numberOfKeys));
+                    }
+
+                    reader.ReadString(); // we read the public key, but we don't use it.
+
+                    var privateKeyData = reader.ReadBinary();
+
+                    if (cipherName == "none")
+                    {
+                        decryptedData = privateKeyData;
+                    }
+                    else
+                    {
+                        switch (keyDerivationFunctionName)
+                        {
+                            case "bcrypt":
+
+                                break;
+                            default:
+                                throw new NotSupportedException(string.Format(CultureInfo.CurrentCulture, "Key Derication Function '{0}' is not supported.", keyDerivationFunctionName));
+                        }
+                    }
+
+                    reader = new SshDataReader(decryptedData);
+
+                    var checkint1 = reader.ReadUInt32();
+                    var checkint2 = reader.ReadUInt32();
+
+                    if (checkint1 != checkint2)
+                    {
+                        throw new SshException(string.Format("Decryption of the private key failed ({0} != {1}).", checkint1, checkint2));
+                    }
+
+                    keyName = reader.ReadString();
+                    switch (keyName)
+                    {
+                        case "ssh-rsa":
+                            _key = new RsaKey(reader.DataStream);
+                            break;
+                        case "ssh-dss":
+                            _key = new DsaKey(reader.DataStream);
+                            break;
+                        default:
+                            throw new NotSupportedException(string.Format(CultureInfo.CurrentCulture, "Key '{0}' is not supported.", keyName));
+                    }
+                    HostKey = new KeyHostAlgorithm(keyName, _key);
+
+                    string comment = reader.ReadString();
+
+                    int iP = 0;
+                    while (!reader.DataStream.IsEndOfData)
+                    {
+                        int pad = reader.DataStream.ReadByte();
+                        if (pad != (++iP & 0xff))
+                        {
+                            throw new SshException(string.Format("{0}: Bad padding.", pad));
+                        }
+                    }
+
+
+                    break;
                 default:
                     throw new NotSupportedException(string.Format(CultureInfo.CurrentCulture, "Key '{0}' is not supported.", keyName));
             }
@@ -399,6 +486,13 @@ namespace Renci.SshNet
 
         private class SshDataReader : SshData
         {
+            public new SshDataStream DataStream
+            {
+                get
+                {
+                    return base.DataStream;
+                }
+            }
             public SshDataReader(byte[] data)
             {
                 LoadBytes(data);
@@ -417,6 +511,11 @@ namespace Renci.SshNet
             public new byte[] ReadBytes(int length)
             {
                 return base.ReadBytes(length);
+            }
+
+            public new byte[] ReadBinary()
+            {
+                return base.ReadBinary();
             }
 
             /// <summary>
