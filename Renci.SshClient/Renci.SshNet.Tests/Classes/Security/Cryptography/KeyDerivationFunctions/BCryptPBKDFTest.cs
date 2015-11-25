@@ -30,7 +30,8 @@ namespace Renci.SshNet.Tests.Classes.Security.Cryptography.KeyDerivationFunction
 
             var bcrypt = new BCryptPBKDF(password, salt, rounds, output.Length);
 
-            var actual = bcrypt.GetBytes(4);
+            var actual = bcrypt.GetBytes(output.Length);
+            Assert.IsTrue(output.SequenceEqual(actual));
         }
 
         [TestMethod]
@@ -48,7 +49,8 @@ namespace Renci.SshNet.Tests.Classes.Security.Cryptography.KeyDerivationFunction
 
             var bcrypt = new BCryptPBKDF(password, salt, rounds, output.Length);
 
-            var actual = bcrypt.GetBytes(4);
+            var actual = bcrypt.GetBytes(output.Length);
+            Assert.IsTrue(output.SequenceEqual(actual));
         }
 
         [TestMethod]
@@ -73,7 +75,8 @@ namespace Renci.SshNet.Tests.Classes.Security.Cryptography.KeyDerivationFunction
 
             var bcrypt = new BCryptPBKDF(password, salt, rounds, output.Length);
 
-            var actual = bcrypt.GetBytes(4);
+            var actual = bcrypt.GetBytes(output.Length);
+            Assert.IsTrue(output.SequenceEqual(actual));
         }
 
         [TestMethod]
