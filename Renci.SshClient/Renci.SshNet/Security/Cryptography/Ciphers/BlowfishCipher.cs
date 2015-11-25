@@ -286,9 +286,9 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
 			0xB74E6132, 0xCE77E25B, 0x578FDFE3, 0x3AC372E6
 		};
 
-		#endregion
+        #endregion
 
-	    private const int _rounds = 16;
+        private const int _rounds = 16;
 
 	    private const int _sboxSk = 256;
 
@@ -304,23 +304,45 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
         /// </summary>
 		private readonly uint[] _p;
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="BlowfishCipher"/> class.
-		/// </summary>
-		/// <param name="key">The key.</param>
-		/// <param name="mode">The mode.</param>
-		/// <param name="padding">The padding.</param>
-		/// <exception cref="ArgumentNullException"><paramref name="key"/> is null.</exception>
-		/// <exception cref="ArgumentException">Keysize is not valid for this algorithm.</exception>
-		public BlowfishCipher(byte[] key, CipherMode mode, CipherPadding padding)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BlowfishCipher"/> class.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="mode">The mode.</param>
+        /// <param name="padding">The padding.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="key"/> is null.</exception>
+        /// <exception cref="ArgumentException">Keysize is not valid for this algorithm.</exception>
+        public BlowfishCipher(byte[] key, CipherMode mode, CipherPadding padding)
+            : this( key, null, mode,  padding)
+        {
+            var keySize = key.Length * 8;
+
+            if (keySize < 1 || keySize > 448)
+                throw new ArgumentException(string.Format("KeySize '{0}' is not valid for this algorithm.", keySize));
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BlowfishCipher"/> class.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="salt">The salt.</param>
+        /// <param name="mode">The mode.</param>
+        /// <param name="padding">The padding.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="key"/> is null.</exception>
+        /// <exception cref="ArgumentException">Keysize is not valid for this algorithm.</exception>
+        public BlowfishCipher(byte[] key, byte[] salt, CipherMode mode, CipherPadding padding)
 			: base(key, 8, mode, padding)
 		{
-			var keySize = key.Length * 8;
+            if (salt != null)
+            {
+                var saltSize = salt.Length * 8;
 
-			if (keySize < 1 || keySize > 448)
-				throw new ArgumentException(string.Format("KeySize '{0}' is not valid for this algorithm.", keySize));
+                // Salt needs to be a multiple of 32 bits.
+                if (saltSize % 32 != 0)
+                    throw new ArgumentException(string.Format("SaltSize '{0}' is not valid for this algorithm.", saltSize));
+            }
 
-			this._s0 = new uint[_sboxSk];
+            this._s0 = new uint[_sboxSk];
 
 			this._s1 = new uint[_sboxSk];
 
@@ -330,7 +352,24 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
 
 			this._p = new uint[_pSize];
 
-			this.SetKey(key);
+           /*
+            * - comments are from _Applied Crypto_, Schneier, p338
+            * please be careful comparing the two, AC numbers the
+            * arrays from 1, the enclosed code from 0.
+            *
+            * (1)
+            * Initialise the S-boxes and the P-array, with a fixed string
+            * This string contains the hexadecimal digits of pi (3.141...)
+            */
+
+            Buffer.BlockCopy(KS0, 0, this._s0, 0, _sboxSk * sizeof(uint));
+            Buffer.BlockCopy(KS1, 0, this._s1, 0, _sboxSk * sizeof(uint));
+            Buffer.BlockCopy(KS2, 0, this._s2, 0, _sboxSk * sizeof(uint));
+            Buffer.BlockCopy(KS3, 0, this._s3, 0, _sboxSk * sizeof(uint));
+
+            Buffer.BlockCopy(KP, 0, this._p, 0, _pSize * sizeof(uint));
+
+            this.ExpandKey(key, salt);
 		}
 
 		/// <summary>
@@ -408,24 +447,14 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
 			return (((this._s0[x >> 24] + this._s1[(x >> 16) & 0xff]) ^ this._s2[(x >> 8) & 0xff]) + this._s3[x & 0xff]);
 		}
 
-		private void SetKey(byte[] key)
+        /// <summary>
+        /// Expands the key. Folds in the salt during the rounds of
+        /// expanding.
+        /// </summary>
+        /// <param name="key">The key to use.</param>
+        /// <param name="salt">The salt to use.</param>
+		internal void ExpandKey(byte[] key, byte[] salt)
 		{
-			/*
-			* - comments are from _Applied Crypto_, Schneier, p338
-			* please be careful comparing the two, AC numbers the
-			* arrays from 1, the enclosed code from 0.
-			*
-			* (1)
-			* Initialise the S-boxes and the P-array, with a fixed string
-			* This string contains the hexadecimal digits of pi (3.141...)
-			*/
-			Buffer.BlockCopy(KS0, 0, this._s0, 0, _sboxSk * sizeof(uint));
-			Buffer.BlockCopy(KS1, 0, this._s1, 0, _sboxSk * sizeof(uint));
-			Buffer.BlockCopy(KS2, 0, this._s2, 0, _sboxSk * sizeof(uint));
-			Buffer.BlockCopy(KS3, 0, this._s3, 0, _sboxSk * sizeof(uint));
-
-			Buffer.BlockCopy(KP, 0, this._p, 0, _pSize * sizeof(uint));
-
 			/*
 			* (2)
 			* Now, XOR P[0] with the first 32 bits of the key, XOR P[1] with the
@@ -455,7 +484,7 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
 				this._p[i] ^= data;
 			}
 
-			/*
+            /*
 			* (3)
 			* Encrypt the all-zero string with the Blowfish algorithm, using
 			* the subkeys described in (1) and (2)
@@ -476,26 +505,42 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
 			* continuously changing Blowfish algorithm
 			*/
 
-			ProcessTable(0, 0, this._p);
-			ProcessTable(this._p[_pSize - 2], this._p[_pSize - 1], this._s0);
-			ProcessTable(this._s0[_sboxSk - 2], this._s0[_sboxSk - 1], this._s1);
-			ProcessTable(this._s1[_sboxSk - 2], this._s1[_sboxSk - 1], this._s2);
-			ProcessTable(this._s2[_sboxSk - 2], this._s2[_sboxSk - 1], this._s3);
+            int saltIndex = 0;
+
+            ProcessTable(0, 0, salt, ref saltIndex, this._p);
+            ProcessTable(this._p[_pSize - 2], this._p[_pSize - 1], salt, ref saltIndex, this._s0);
+            ProcessTable(this._s0[_sboxSk - 2], this._s0[_sboxSk - 1], salt, ref saltIndex, this._s1);
+            ProcessTable(this._s1[_sboxSk - 2], this._s1[_sboxSk - 1], salt, ref saltIndex, this._s2);
+            ProcessTable(this._s2[_sboxSk - 2], this._s2[_sboxSk - 1], salt, ref saltIndex, this._s3);
 		}
 
-		/// <summary>
-		/// apply the encryption cycle to each value pair in the table.
-		/// </summary>
-		/// <param name="xl">The xl.</param>
-		/// <param name="xr">The xr.</param>
-		/// <param name="table">The table.</param>
-		private void ProcessTable(uint xl, uint xr, uint[] table)
+        /// <summary>
+        /// apply the encryption cycle to each value pair in the table.
+        /// </summary>
+        /// <param name="xl">The xl.</param>
+        /// <param name="xr">The xr.</param>
+        /// <param name="salt">The salt.</param>
+        /// <param name="saltIndex">The salt index</param>
+        /// <param name="table">The table.</param>
+        private void ProcessTable(uint xl, uint xr, byte[] salt, ref int saltIndex, uint[] table)
 		{
 			int size = table.Length;
 
 			for (int s = 0; s < size; s += 2)
 			{
-				xl ^= _p[0];
+                if (salt != null)
+                {
+                    xl ^= BigEndianToUInt32(salt, saltIndex);
+                    saltIndex += 4;
+                    if (saltIndex >= salt.Length)
+                        saltIndex = 0;
+                    xr ^= BigEndianToUInt32(salt, saltIndex);
+                    saltIndex += 4;
+                    if (saltIndex >= salt.Length)
+                        saltIndex = 0;
+                }
+
+                xl ^= _p[0];
 
 				for (int i = 1; i < _rounds; i += 2)
 				{

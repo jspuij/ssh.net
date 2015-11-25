@@ -219,6 +219,7 @@
     <Compile Include="Classes\Common\PortForwardEventArgsTest.cs" />
     <Compile Include="Classes\Compression\ZlibTest.cs" />
     <Compile Include="Classes\ConnectionInfoTest.cs" />
+    <Compile Include="Classes\Security\Cryptography\KeyDerivationFunctions\BCryptPBKDFTest.cs" />
     <Compile Include="Classes\SessionTest_Connected.cs" />
     <Compile Include="Classes\SessionTest_ConnectedBase.cs" />
     <Compile Include="Classes\SessionTest_Connected_ConnectionReset.cs" />

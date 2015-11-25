@@ -12,6 +12,7 @@ using Renci.SshNet.Security.Cryptography.Ciphers;
 using Renci.SshNet.Security.Cryptography.Ciphers.Modes;
 using Renci.SshNet.Security.Cryptography.Ciphers.Paddings;
 using System.Diagnostics.CodeAnalysis;
+using Renci.SshNet.Security.Cryptography.KeyDerivationFunctions;
 
 namespace Renci.SshNet
 {
@@ -292,9 +293,19 @@ namespace Renci.SshNet
                     }
 
                     string keyDerivationFunctionName = reader.ReadString();
-                    string keyDerivationFunctionOptions = reader.ReadString();
+                    byte[] keyDerivationFunctionOptions = reader.ReadBinary();
+
+                    if (cipherName == "none" && keyDerivationFunctionName != "none")
+                    {
+                        throw new SshException("Encrypting the private key with a Cipher requires a key derivation function.");
+
+                    }
+
                     var numberOfKeys = reader.ReadUInt32();
-                    if (numberOfKeys != 1)
+
+                    // OpenSSH currently only supports one key as well, although the format can contain more.
+                    // No need to support more than one.
+                    if (numberOfKeys != 1) 
                     {
                         throw new NotSupportedException(string.Format("Multiple keys ({0}) in one keyfile not supported.", numberOfKeys));
                     }
@@ -312,6 +323,53 @@ namespace Renci.SshNet
                         switch (keyDerivationFunctionName)
                         {
                             case "bcrypt":
+
+                                var bcryptPBKDFOptions = new BCryptKeyDerivationOptions();
+                                bcryptPBKDFOptions.Load(keyDerivationFunctionOptions);
+
+
+                                CipherInfo cipherInfo;
+
+                                switch (cipherName)
+                                {
+                                    case "3des-cbc":
+                                        cipherInfo = new CipherInfo(192, (key, iv) => new TripleDesCipher(key, new CbcCipherMode(iv), new PKCS7Padding()));
+                                        break;
+                                    case "3des":
+                                        cipherInfo = new CipherInfo(192, (key, iv) => new TripleDesCipher(key, new CfbCipherMode(iv), new PKCS7Padding()));
+                                        break;
+                                    case "des":
+                                        cipherInfo = new CipherInfo(64, (key, iv) => new DesCipher(key, new CbcCipherMode(iv), new PKCS7Padding()));
+                                        break;
+                                    case "aes128-cbc":
+                                        cipherInfo = new CipherInfo(128, (key, iv) => new AesCipher(key, new CbcCipherMode(iv), new PKCS7Padding()));
+                                        break;
+                                    case "aes192-cbc":
+                                        cipherInfo = new CipherInfo(192, (key, iv) => new AesCipher(key, new CbcCipherMode(iv), new PKCS7Padding()));
+                                        break;
+                                    case "aes256-cbc":
+                                        cipherInfo = new CipherInfo(256, (key, iv) => new AesCipher(key, new CbcCipherMode(iv), new PKCS7Padding()));
+                                        break;
+                                    default:
+                                        throw new SshException(string.Format(CultureInfo.CurrentCulture, "Private key cipher \"{0}\" is not supported.", cipherName));
+                                }
+                                int keyLen = cipherInfo.KeySize / 8;
+
+                                // initialization vector length in bytes. Now for all supported ciphers IV length equals key length. But separated anyhow for future support of different ciphers.
+                                int ivLen = keyLen; 
+
+                                // Create the bcrypt_pbkdf key derivation function object using the required arguments.
+                                var bcryptPBKDF = new BCryptPBKDF(passPhrase, bcryptPBKDFOptions.Salt, bcryptPBKDFOptions.Rounds, keyLen + ivLen);
+
+                                // derive the number of bytes neccessary for the keylength of the cypher.
+                                var cipherKey = bcryptPBKDF.GetBytes(cipherInfo.KeySize / 8);
+                                // derive the number of bytes neccessary for the initialization of the cypher.
+                                var cipherIV = bcryptPBKDF.GetBytes(ivLen);
+
+                                // get the cypher.
+                                var cipher = cipherInfo.Cipher(cipherKey, cipherIV);
+                                // decrypt the data
+                                decryptedData = cipher.Decrypt(privateKeyData);
 
                                 break;
                             default:
@@ -541,6 +599,36 @@ namespace Renci.SshNet
 
             protected override void SaveData()
             {
+            }
+        }
+
+        /// <summary>
+        /// Private class for the BCryptPBKDF key derivation options.
+        /// </summary>
+        private class BCryptKeyDerivationOptions : SshData
+        {
+            /// <summary>
+            /// Salt used for the BCryptPBKDF function.
+            /// </summary>
+            public byte[] Salt { get; private set; }
+
+            /// <summary>
+            /// Number of rounds used for the BcryptPBKDF function.
+            /// </summary>
+            public int Rounds { get; private set; }
+
+            /// <summary>
+            /// Reads the data from the underlying stream.
+            /// </summary>
+            protected override void LoadData()
+            {
+                Salt = ReadBinary();
+                Rounds = (int)ReadUInt32();
+            }
+
+            protected override void SaveData()
+            {
+                throw new NotImplementedException();
             }
         }
     }
