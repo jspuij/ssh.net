@@ -361,12 +361,12 @@ namespace Renci.SshNet
                                 // Create the bcrypt_pbkdf key derivation function object using the required arguments.
                                 var bcryptPBKDF = new BCryptPBKDF(passPhrase, bcryptPBKDFOptions.Salt, bcryptPBKDFOptions.Rounds, keyLen + ivLen);
 
-                                // derive the number of bytes neccessary for the keylength of the cypher.
-                                var cipherKey = bcryptPBKDF.GetBytes(cipherInfo.KeySize / 8);
-                                // derive the number of bytes neccessary for the initialization of the cypher.
+                                // derive the number of bytes neccessary for the keylength of the cipher.
+                                var cipherKey = bcryptPBKDF.GetBytes(keyLen);
+                                // derive the number of bytes neccessary for the initialization vector of the cipher.
                                 var cipherIV = bcryptPBKDF.GetBytes(ivLen);
 
-                                // get the cypher.
+                                // get the cipher.
                                 var cipher = cipherInfo.Cipher(cipherKey, cipherIV);
                                 // decrypt the data
                                 decryptedData = cipher.Decrypt(privateKeyData);
