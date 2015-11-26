@@ -164,6 +164,7 @@
     <Compile Include="Messages\Transport\KeyExchangeEcdhInitMessage.cs" />
     <Compile Include="Messages\Transport\KeyExchangeEcdhReplyMessage.cs" />
     <Compile Include="Netconf\INetConfSession.cs" />
+    <Compile Include="Security\Cryptography\Ed25519Key.cs" />
     <Compile Include="Security\Cryptography\Hashes\RIPEMD160Hash.cs" />
     <Compile Include="Security\Cryptography\Hashes\SHA2HashBase.cs">
       <SubType>Code</SubType>
@@ -175,6 +176,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Security\Cryptography\KeyDerivationFunctions\BCryptPBKDF.cs" />
+    <Compile Include="Security\Cryptography\SignatureSchemes\Ed25519DigitalSignature.cs" />
     <Compile Include="Security\GroupExchangeHashData.cs" />
     <Compile Include="Security\IKeyExchange.cs" />
     <Compile Include="Security\KeyExchangeDiffieHellmanGroupExchangeShaBase.cs" />
@@ -350,7 +352,7 @@
     <Compile Include="Security\Cryptography\DigitalSignature.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Security\Cryptography\DsaDigitalSignature.cs">
+    <Compile Include="Security\Cryptography\SignatureSchemes\DsaDigitalSignature.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Security\Cryptography\DsaKey.cs">
@@ -371,7 +373,7 @@
     <Compile Include="Security\Cryptography\Key.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Security\Cryptography\RsaDigitalSignature.cs">
+    <Compile Include="Security\Cryptography\SignatureSchemes\RsaDigitalSignature.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Security\Cryptography\RsaKey.cs">
@@ -493,6 +495,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Documentation\SshNet.shfbproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Math\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
