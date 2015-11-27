@@ -161,6 +161,10 @@
     <Compile Include="IServiceFactory.NET.cs" />
     <Compile Include="ISession.cs" />
     <Compile Include="ISubsystemSession.cs" />
+    <Compile Include="Mathematics\Ed25519Ref10\FieldElement.Construction.cs" />
+    <Compile Include="Mathematics\Ed25519Ref10\FieldElement.cs" />
+    <Compile Include="Mathematics\Ed25519Ref10\FieldElement.Operations.cs" />
+    <Compile Include="Mathematics\Ed25519Ref10\FieldElement.Operators.cs" />
     <Compile Include="Messages\Transport\KeyExchangeEcdhInitMessage.cs" />
     <Compile Include="Messages\Transport\KeyExchangeEcdhReplyMessage.cs" />
     <Compile Include="Netconf\INetConfSession.cs" />
@@ -496,9 +500,7 @@
   <ItemGroup>
     <Content Include="Documentation\SshNet.shfbproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Math\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

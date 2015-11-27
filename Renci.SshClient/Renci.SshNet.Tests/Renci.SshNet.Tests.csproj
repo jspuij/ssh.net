@@ -48,7 +48,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Moq">
       <HintPath>..\packages\Moq.4.2.1409.1722\lib\net40\Moq.dll</HintPath>
     </Reference>
@@ -172,6 +174,7 @@
     <Compile Include="Classes\ForwardedPortRemoteTest_Stop_PortNeverStarted.cs" />
     <Compile Include="Classes\ForwardedPortRemoteTest_Stop_PortStarted_ChannelBound.cs" />
     <Compile Include="Classes\ForwardedPortRemoteTest_Stop_PortStopped.cs" />
+    <Compile Include="Classes\Mathematics\Ed25519Ref10\FieldElementTest.cs" />
     <Compile Include="Classes\Messages\Transport\KeyExchangeDhGroupExchangeGroupBuilder.cs" />
     <Compile Include="Classes\Messages\Transport\KeyExchangeDhGroupExchangeReplyBuilder.cs" />
     <Compile Include="Classes\NetConfClientTest_Dispose_Connected.cs" />
